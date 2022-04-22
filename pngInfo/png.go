@@ -1,11 +1,17 @@
+package png
+
 // CODE IS FROM EITHER THE BLACK HAT GO BOOK OR BLACK HAT GO REPO WITH MINOR MODIFICATION
 
 import (
-	"log"
 	"bytes"
+	"fmt"
 	"enconding/binary"
+	"hash/crc32"
+	"log"
+	"models"
 	"strconv"
 	"strings"
+	"util"
 )
 
 // Header of the PNG file
@@ -38,13 +44,118 @@ func (mc *MetaChunk) validate(b *bytes.Reader) {
 	}
 }
 
-//Read chunk
-func (mc *MetaChunk) ProcessIMage(b *bytes.Reader, c *models.CmdLineOpts) {
+//Read the sequence of chunks that makes up the file
+func (mc *MetaChunk) ProcessImage(b *bytes.Reader, c *models.CmdLineOpts) {
+	mc.validate(b)
+	
+	var m MetaChunk
+	m.Chk.Data = []byte(c.Payload)
+	m.Chk.Type = m.strToInt(c.Type)
+	m.Chk.Size = m.createChunkSize()
+	m.Chk.CRC = m.createChunkCRC()
+
+	bm := m.marshalData()
+	bmb := bm.Bytes()
+
+	fmt.Printf("Payload Original: % X\n" , []byte(c.Payload))
+	fmt.Printf("Payload: % X\n", m.Chk.Data)
+	util.WriteData(b, c, bmb)
+
 	count := 1
 	chunkType := ""
 	endChunkType := "IEND"
 	
 	for chunkType != endChunkType {
 		fmt.Println("---- Chunk # " + strconv.Itoa(count) + " ----")
+		offset := chk.getOffset(b)
+		fmt.Printf("Chunk Offset: %#02x\n", offset)
+		chk.readChunk(b)
+		chunkType = chk.chunkTypeToString()
+		count++
 	}
+}
+
+//Get the offset of a chunk
+func (mc *MetaChunk) getOffset(b *bytes.Reader) {
+	offset, _ := b.Seek(0, 1)
+	mc.Offset = offset
+}
+
+//Reads individual chunks
+func (mc *MetaChunk) readChunk(b *bytes.Reader) {
+	mc.readChunkSize(b)
+	mc.readChunkType(b)
+	mc.readCHunkBytes(b, mc.Chk.Size)
+	mc.readChunkCRC(b)
+}
+
+//Helper functions to read indvidual chunks
+func (mc *MetaChunk) readChunkSize(b *bytes.Reader) {
+	if err := binary.Read(b, binary.BigEndian, &mc.Chk.Size); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (mc *MetaChunk) readChunkType(b *bytes.Reader) {
+	if err := binary.Read(b, binary.BigEndian, &mc.Chk.Type); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (mc *MetaChunk) readChunkBytes(b *bytes.Reader, cLen uint32) {
+	mc.Chk.Data = make([]byte, cLen)
+	if err := binary.Read(b, binary.BigEndian, &mc.Chk.Data); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (mc *MetaChunk) readChunkCRC(b *bytes.Reader) {
+	if err := binary.Read(b, binary.BigEndian, &mc.Chk.CRC); err != nil {
+		log.Fatal(err)
+	}
+}
+
+//Helper functions to create chunks
+func (mc *MetaChunk) strToInt(s string) uint32 {
+	t := []byte(s)
+	return binary.BigEndian.Uint32(t)
+}
+
+func (mc *MetaChunk) createChunkSize() uint32 {
+	return uint32(len(mc.Chk.Data))
+}
+
+func (mc *MetaChunk) createChunkCRC() uint32 {
+	byteMSB := new(bytes.Buffer)
+	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Type); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Data); err != nil {
+		log.Fatal(err)
+	}
+	
+	return crc32.ChecksumIEEE(bytesMSB.Bytes())
+}
+
+func (mc *MetaChunk) marshalData() *bytes.Buffer {
+	bytesMSB := new(bytes.Buffer)
+
+	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Size); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Type); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Data); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.CRC); err != nil {
+		log.Fatal(err)
+	}
+
+	return bytesMSB
 }
