@@ -27,6 +27,12 @@ type Chunk strut {
 	CRC uint32
 }
 
+//MetaChunk = chunk with offset
+type MetaChunk struct {
+	Chk Chunk
+	Offset int64
+}
+
 //Validate if file is a PNG
 func (mc *MetaChunk) validate(b *bytes.Reader) {
 	var header Header
@@ -48,18 +54,53 @@ func (mc *MetaChunk) validate(b *bytes.Reader) {
 func (mc *MetaChunk) ProcessImage(b *bytes.Reader, c *models.CmdLineOpts) {
 	mc.validate(b)
 	
-	var m MetaChunk
-	m.Chk.Data = []byte(c.Payload)
-	m.Chk.Type = m.strToInt(c.Type)
-	m.Chk.Size = m.createChunkSize()
-	m.Chk.CRC = m.createChunkCRC()
+	if (c.Offset != "") && (c.Encode == false & c.Decode == false) {
+		var m MetaChunk
+		m.Chk.Data = []byte(c.Payload)
+		m.Chk.Type = m.strToInt(c.Type)
+		m.Chk.Size = m.createChunkSize()
+		m.Chk.CRC = m.createChunkCRC()
 
-	bm := m.marshalData()
-	bmb := bm.Bytes()
+		bm := m.marshalData()
+		bmb := bm.Bytes()
 
-	fmt.Printf("Payload Original: % X\n" , []byte(c.Payload))
-	fmt.Printf("Payload: % X\n", m.Chk.Data)
-	util.WriteData(b, c, bmb)
+		fmt.Printf("Payload Original: % X\n" , []byte(c.Payload))
+		fmt.Printf("Payload: % X\n", m.Chk.Data)
+		util.WriteData(b, c, bmb)
+	}
+
+	if (c.Offset != "") && c.Encode {
+		var m MetaChunk
+		m.Chk.Data = util.XorEncode([]byte(c.Payload), c.Key)
+		m.Chk.Type = chk.strToInt(c.Type)
+		m.Chk.Size = chk.createChunkSize()
+		m.Chk.CRC = chk.createChunkCRC()
+
+		bm := chk.marshalData()
+		bmb := bm.Bytes()
+		
+		fmt.Printf("Payload Original: % X\n", []byte(c.Payload))
+		fmt.Printf("Payload Encode: % X\n", chk.Data)
+		util.WriteData(b, c, bmb)
+	}
+
+	if (c.Offset != "") && c.Decode {
+		var m MetaChunk
+		offset, _ := strconv.ParseInt(c.Offset, 10 , 64)
+		b.Seek(offset, 0)
+
+		m.readChunk(b)
+		origData := m.Chk.Data
+		m.Chk.Data = util.XorDecode(m.Chk.Data, c.Key)
+		m.Chk.CRC = m.createChunkCRC()
+
+		bm := m.marshalData()
+		bmb := bm.Bytes()
+
+		fmt.Printf("Payload Original: % X\n", origData)
+		fmt.Printf("Payload Decode: % X\n", m.Chk.Data)
+		util.WriteData(b, c, bmb)
+	}
 
 	count := 1
 	chunkType := ""

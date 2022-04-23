@@ -8,16 +8,16 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/blackhat-go/bhg/ch-13/imgInject/models"
-	"github.com/blackhat-go/bhg/ch-13/imgInject/pnglib"
-	"github.com/blackhat-go/bhg/ch-13/imgInject/utils"
+	"models"
+	"pngInfo"
+	"util"
 	"github.com/spf13/pflag"
 )
 
 var (
 	flags = pflag.FlagSet{SortFlags: false}
 	opts  models.CmdLineOpts
-	png   pnglib.MetaChunk
+	png   pngInfo.MetaChunk
 )
 
 func init() {
@@ -79,7 +79,7 @@ func usage() {
 func main() {
 	dat, err := os.Open(opts.Input)
 	defer dat.Close()
-	bReader, err := utils.PreProcessImage(dat)
+	bReader, err := util.PreProcessImage(dat)
 	if err != nil {
 		log.Fatal(err)
 	}
