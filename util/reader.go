@@ -1,6 +1,6 @@
 // CODE IS FROM EITHER THE BLACK HAT GO BOOK OR BLACK HAT GO REPO WITH MINOR MODIFICATION
 
-package util
+// why...
 
 import (
 	"bufio"
