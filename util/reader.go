@@ -1,10 +1,10 @@
-package util
-
 // CODE IS FROM EITHER THE BLACK HAT GO BOOK OR BLACK HAT GO REPO WITH MINOR MODIFICATION
 
+package util
+
 import (
-	"byte"
 	"bufio"
+	"bytes"
 	"log"
 	"os"
 )
@@ -20,7 +20,7 @@ func PreProcessImage(dat *os.File) (*bytes.Reader, error) {
 	b := make([]byte, size)
 
 	bufR := bufio.NewReader(dat)
-	
+
 	if _, err := bufR.Read(b); err != nil {
 		log.Fatal(err)
 	}
