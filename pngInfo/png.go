@@ -5,7 +5,7 @@ package png
 import (
 	"bytes"
 	"fmt"
-	"enconding/binary"
+	//"enconding/binary"
 	"hash/crc32"
 	"log"
 	"models"
