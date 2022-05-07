@@ -1,14 +1,15 @@
 // CODE IS FROM EITHER THE BLACK HAT GO BOOK OR BLACK HAT GO REPO WITH MINOR MODIFICATION
 
+package pnginfo
+
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
-	//"enconding/binary"
 	"hash/crc32"
 	"log"
 	"models"
 	"strconv"
-	"strings"
 	"util"
 )
 
@@ -18,23 +19,23 @@ type Header struct {
 }
 
 //Chunk = data byte chunk segment
-type Chunk strut {
+type Chunk struct {
 	Size uint32
 	Type uint32
 	Data []byte
-	CRC uint32
+	CRC  uint32
 }
 
 //MetaChunk = chunk with offset
 type MetaChunk struct {
-	Chk Chunk
+	Chk    Chunk
 	Offset int64
 }
 
 //Validate if file is a PNG
 func (mc *MetaChunk) validate(b *bytes.Reader) {
 	var header Header
-	if err := binary.Read(b, binaryBigEndian, &header.Header); err != nil {
+	if err := binary.Read(b, binary.BigEndian, &header.Header); err != nil {
 		log.Fatal(err)
 	}
 
@@ -51,8 +52,8 @@ func (mc *MetaChunk) validate(b *bytes.Reader) {
 //Read the sequence of chunks that makes up the file
 func (mc *MetaChunk) ProcessImage(b *bytes.Reader, c *models.CmdLineOpts) {
 	mc.validate(b)
-	
-	if (c.Offset != "") && (c.Encode == false & c.Decode == false) {
+
+	if (c.Offset != "") && (c.Encode == false && c.Decode == false) {
 		var m MetaChunk
 		m.Chk.Data = []byte(c.Payload)
 		m.Chk.Type = m.strToInt(c.Type)
@@ -62,7 +63,7 @@ func (mc *MetaChunk) ProcessImage(b *bytes.Reader, c *models.CmdLineOpts) {
 		bm := m.marshalData()
 		bmb := bm.Bytes()
 
-		fmt.Printf("Payload Original: % X\n" , []byte(c.Payload))
+		fmt.Printf("Payload Original: % X\n", []byte(c.Payload))
 		fmt.Printf("Payload: % X\n", m.Chk.Data)
 		util.WriteData(b, c, bmb)
 	}
@@ -70,21 +71,21 @@ func (mc *MetaChunk) ProcessImage(b *bytes.Reader, c *models.CmdLineOpts) {
 	if (c.Offset != "") && c.Encode {
 		var m MetaChunk
 		m.Chk.Data = util.XorEncode([]byte(c.Payload), c.Key)
-		m.Chk.Type = chk.strToInt(c.Type)
-		m.Chk.Size = chk.createChunkSize()
-		m.Chk.CRC = chk.createChunkCRC()
+		m.Chk.Type = m.strToInt(c.Type)
+		m.Chk.Size = m.createChunkSize()
+		m.Chk.CRC = m.createChunkCRC()
 
-		bm := chk.marshalData()
+		bm := m.marshalData()
 		bmb := bm.Bytes()
-		
+
 		fmt.Printf("Payload Original: % X\n", []byte(c.Payload))
-		fmt.Printf("Payload Encode: % X\n", chk.Data)
+		fmt.Printf("Payload Encode: % X\n", m.Chk.Data)
 		util.WriteData(b, c, bmb)
 	}
 
 	if (c.Offset != "") && c.Decode {
 		var m MetaChunk
-		offset, _ := strconv.ParseInt(c.Offset, 10 , 64)
+		offset, _ := strconv.ParseInt(c.Offset, 10, 64)
 		b.Seek(offset, 0)
 
 		m.readChunk(b)
@@ -103,15 +104,16 @@ func (mc *MetaChunk) ProcessImage(b *bytes.Reader, c *models.CmdLineOpts) {
 	count := 1
 	chunkType := ""
 	endChunkType := "IEND"
-	
-	for chunkType != endChunkType {
-		fmt.Println("---- Chunk # " + strconv.Itoa(count) + " ----")
-		offset := chk.getOffset(b)
-		fmt.Printf("Chunk Offset: %#02x\n", offset)
-		chk.readChunk(b)
-		chunkType = chk.chunkTypeToString()
-		count++
-	}
+
+	// for chunkType != endChunkType {
+	// 	var chk MetaChunk
+	// 	fmt.Println("---- Chunk # " + strconv.Itoa(count) + " ----")
+	// 	offset := chk.getOffset(b)
+	// 	fmt.Printf("Chunk Offset: %#02x\n", offset)
+	// 	chk.readChunk(b)
+	// 	chunkType = chk.chunkTypeToString()
+	// 	count++
+	// }
 }
 
 //Get the offset of a chunk
@@ -124,7 +126,7 @@ func (mc *MetaChunk) getOffset(b *bytes.Reader) {
 func (mc *MetaChunk) readChunk(b *bytes.Reader) {
 	mc.readChunkSize(b)
 	mc.readChunkType(b)
-	mc.readCHunkBytes(b, mc.Chk.Size)
+	mc.readChunkBytes(b, mc.Chk.Size)
 	mc.readChunkCRC(b)
 }
 
@@ -165,7 +167,7 @@ func (mc *MetaChunk) createChunkSize() uint32 {
 }
 
 func (mc *MetaChunk) createChunkCRC() uint32 {
-	byteMSB := new(bytes.Buffer)
+	bytesMSB := new(bytes.Buffer)
 	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Type); err != nil {
 		log.Fatal(err)
 	}
@@ -173,7 +175,7 @@ func (mc *MetaChunk) createChunkCRC() uint32 {
 	if err := binary.Write(bytesMSB, binary.BigEndian, mc.Chk.Data); err != nil {
 		log.Fatal(err)
 	}
-	
+
 	return crc32.ChecksumIEEE(bytesMSB.Bytes())
 }
 

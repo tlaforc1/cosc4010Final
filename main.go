@@ -5,11 +5,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"strconv"
-
 	"models"
-	"pngInfo"
+	"os"
+	"pnginfo"
+	"strconv"
 	"util"
 
 	"github.com/spf13/pflag"
@@ -18,14 +17,14 @@ import (
 var (
 	flags = pflag.FlagSet{SortFlags: false}
 	opts  models.CmdLineOpts
-	png   pngInfo.MetaChunk
+	png   pnginfo.MetaChunk
 )
 
 func init() {
 	flags.StringVarP(&opts.Input, "input", "i", "", "Path to the original image file")
 	flags.StringVarP(&opts.Output, "output", "o", "", "Path to output the new image file")
 	flags.BoolVarP(&opts.Meta, "meta", "m", false, "Display the actual image meta details")
-	flags.BoolVarP(&opts.Suppress, "suppress", "s", false, "Suppress the chunk hex data (can be large)")
+	flags.BoolVarP(&opts.Supress, "suppress", "s", false, "Suppress the chunk hex data (can be large)")
 	flags.StringVar(&opts.Offset, "offset", "", "The offset location to initiate data injection")
 	flags.BoolVar(&opts.Inject, "inject", false, "Enable this to inject data at the offset location specified")
 	flags.StringVar(&opts.Payload, "payload", "", "Payload is data that will be read as a byte stream")
@@ -48,7 +47,7 @@ func init() {
 		byteOffset, _ := strconv.ParseInt(opts.Offset, 0, 64)
 		opts.Offset = strconv.FormatInt(byteOffset, 10)
 	}
-	if opts.Suppress && (opts.Meta == false) {
+	if opts.Supress && (opts.Meta == false) {
 		log.Fatal("Fatal: The --meta flag is required when using --suppress")
 	}
 	if opts.Meta && (opts.Offset != "") {

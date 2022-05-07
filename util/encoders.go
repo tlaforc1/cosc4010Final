@@ -1,9 +1,9 @@
 package util
 
 //changes a byte array based upon a given key
-fun encodeDecode(input []byte, key string) []byte {
+func encodeDecode(input []byte, key string) []byte {
 	var bArr = make([]byte, len(input))
-	for i :=0; i < len(input); i++ {
+	for i := 0; i < len(input); i++ {
 		bArr[i] += input[i] ^ key[i%len(key)]
 	}
 
